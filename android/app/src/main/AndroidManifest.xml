@@ -3,8 +3,13 @@
         android:label="bikepath"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- used for maps api sdk -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCz9g-xPlgJYSqvPUD_f6GZvQha8jbCs7A" /> 
         <activity
             android:name=".MainActivity"
+            android:enableOnBackInvokedCallback="true"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -24,6 +29,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
