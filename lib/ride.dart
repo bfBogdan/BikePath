@@ -22,8 +22,6 @@ class _RideScreenState extends State<RideScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
-    // Check permissions (if you haven't already)
-
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
     _mapController?.animateCamera(
@@ -53,6 +51,8 @@ class _RideScreenState extends State<RideScreen> {
   void stopTimer() {
     _timer?.cancel();
   }
+
+  
 
   @override
   void initState() {

@@ -1,7 +1,10 @@
 import 'package:bikepath/main.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:bikepath/ride.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -11,11 +14,38 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+
   GoogleMapController? _mapController;
   final LatLng _center = const LatLng(45.521563, -122.677433); // Example: Portland, OR
 
+  Future<void> _requestLocationPermission() async {
+    var status = await Permission.location.request();
+    if (status.isGranted) {
+      // Permission granted - proceed
+    } else {
+      // Handle permission denial 
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _requestLocationPermission();
+    _getCurrentLocation();
+  }
+
+  
+
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+  }
+
+  Future<void> _getCurrentLocation() async {
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(position.latitude, position.longitude), 15.0) 
+    );
   }
 
   @override
@@ -49,6 +79,7 @@ class _HomeState extends State<Home> {
                 children: [
                   GoogleMap(
                     onMapCreated: _onMapCreated,
+                    myLocationEnabled: true,
                     initialCameraPosition: CameraPosition(
                       target: _center,
                       zoom: 11.0,

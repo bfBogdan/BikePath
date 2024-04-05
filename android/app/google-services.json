@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "717238773562",
+    "firebase_url": "https://bikepath24-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "bikepath24",
+    "storage_bucket": "bikepath24.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:717238773562:android:422bc5ca2cbe2ae6275203",
+        "android_client_info": {
+          "package_name": "com.example.bikepath"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUVGNk3f1JCl9YLJpeX-LBRxEck_r4UZo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
