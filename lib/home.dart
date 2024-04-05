@@ -1,6 +1,7 @@
 import 'package:bikepath/main.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:bikepath/ride.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -72,7 +73,10 @@ class _HomeState extends State<Home> {
                         bottom: 20,
                         child: InkWell(
                           onTap: () {
-                            
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => RideScreen()),
+                            );
                           },
                           child: Container(
                             width: 120,
@@ -91,8 +95,8 @@ class _HomeState extends State<Home> {
                               ],
                             ),
                           ),
+                        )
                         ),
-                      ),
                     ],
                   ),
                 ],
