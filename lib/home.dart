@@ -1,7 +1,8 @@
 import 'dart:convert';
-
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:bikepath/main.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:bikepath/ride.dart';
@@ -16,7 +17,8 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
-  
+
+  Position currentPosition = Position(longitude: 0.0, latitude: 0.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);  
 
   GoogleMapController? _mapController;
   final LatLng _center = const LatLng(45.521563, -122.677433); // Example: Portland, OR
@@ -80,16 +82,23 @@ class _HomeState extends State<Home> {
       print(_polylines);
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
     _mapController = controller;
+    String mapStyle = await getMapStyle();
+    controller.setMapStyle(mapStyle);
   }
 
-  Future<void> _getCurrentLocation() async {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  Future<String> getMapStyle() async {
+    return await rootBundle.loadString('lib/assets/map_style.json');
+  }
+
+  Future<Position> _getCurrentLocation() async {
+    currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
     _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(position.latitude, position.longitude), 15.0) 
+      CameraUpdate.newLatLngZoom(LatLng(currentPosition.latitude, currentPosition.longitude), 15.0) 
     );
+    return currentPosition;
   }
 
   @override
@@ -104,52 +113,46 @@ class _HomeState extends State<Home> {
         } else {
           return SafeArea(
             child: Scaffold(
+              backgroundColor: Color.fromARGB(255, 53, 53, 53),
               body: Column(
                 children: [
                   Container(
                     width: double.infinity,
                     height: 109,
                     decoration: BoxDecoration(
-                      color: Colors.white
+                      color: Color.fromARGB(255, 29, 29, 29),
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.only(top: 10, left: 20, right: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Center(child: Padding(
+                          Padding(
                             padding: const EdgeInsets.only(top: 5),
-                            child: Image.asset('lib/assets/logo_long.png', width: 250),
-                          )),
-                          Center(child: Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: black),)),
+                            child: Image.asset('lib/assets/logo_long.png', width: 200),
+                          ),
+                          Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: Colors.white),),
                         ],
                       ),
                     ),
                   ),
+                  SizedBox(height: 5,),
                   Expanded(
                     child: Stack(
                       children: [
-                        GoogleMap(
-                          onMapCreated: _onMapCreated,
-                          myLocationEnabled: true,
-                          initialCameraPosition: CameraPosition(
-                            target: _center,
-                            zoom: 11.0,
-                          ),
-                          polylines: _polylines,
-                        ),
-                        Positioned(
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          child: Container(
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(100), bottomRight: Radius.circular(100)),
-                              boxShadow: List<BoxShadow>.generate(2, (index) => BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: Offset(0, 7))),
+                        ClipRRect(
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                          child: GoogleMap(
+                            onMapCreated: _onMapCreated,
+                            myLocationEnabled: true,
+                            initialCameraPosition: CameraPosition(
+                              target: currentPosition != null ? LatLng(currentPosition.latitude, currentPosition.longitude) : _center,
+                              zoom: 11.0,
                             ),
-                        ),),
+                            polylines: _polylines,
+                          ),
+                        ),
                         Stack(
                           alignment: Alignment.center,
                           children: [

@@ -43,6 +43,7 @@ dependencies:
   firebase_database: ^10.5.0
   cloud_firestore: ^4.16.0
   sensors_plus: ^5.0.0
+  weather: ^3.1.1
 
 dev_dependencies:
   flutter_test:
@@ -70,6 +71,7 @@ flutter:
   assets:
     - lib/assets/logo_long.png
     - lib/assets/logo_square.png
+    - lib/assets/map_style.json
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

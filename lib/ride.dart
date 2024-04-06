@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:io';
 import 'dart:isolate';
+import 'package:weather/weather.dart';
 
 class RideScreen extends StatefulWidget {
   @override
@@ -25,8 +26,8 @@ class _RideScreenState extends State<RideScreen> {
   final LatLng _center = const LatLng(45.521563, -122.677433); // Example: Portland, OR
   Position startingPosition = Position(longitude: 0.0, latitude: 0.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
   Position currentPosition = Position(longitude: 0.0, latitude: 0.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
-  double distance = 0.0;
-  double speed=0.0;
+  int distance = 0;
+  int speed = 0;
   Timer? _timer;
   bool toggle = false;
   int seconds = 0;
@@ -34,6 +35,10 @@ class _RideScreenState extends State<RideScreen> {
   Timer? timer;
   bool started = false;
   late Future<List> dataList;
+  int traveledDistance = 0;
+  static const OPENWEATHER_API_KEY='854190768a121f80c54f46909cca4864';
+  final WeatherFactory _wf=WeatherFactory(OPENWEATHER_API_KEY);
+  Weather? weather;
 
 
   void _onMapCreated(GoogleMapController controller) {
@@ -49,36 +54,36 @@ class _RideScreenState extends State<RideScreen> {
     return currentPosition;
   }
 
-  double _getDistance() {
-    distance = Geolocator.distanceBetween(startingPosition.latitude, startingPosition.longitude, currentPosition.latitude, currentPosition.longitude);
-    return distance;
+  int _getDistance() {
+    traveledDistance = Geolocator.distanceBetween(startingPosition.latitude, startingPosition.longitude, currentPosition.latitude, currentPosition.longitude).toInt();
+    return distance.toInt();
   }
 
-  double _getSpeed() {
-    speed = currentPosition.speed;
-    return speed;
+  int _getSpeed() {
+    speed = currentPosition.speed.toInt();
+    return speed.toInt();
   }
 
   void startTracking() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) async {
       if(firstRun) {
         position1 = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        startingPosition = position1;
         firstRun = false;
       }
       else{
-        double qIndex = 0;
-        for(int i = 0; i < accZ.length; i++) {
-          qIndex += accZ[i];
+        _getDistance();
+        double qIndex = accZ[0];
+        for(int i = 1; i < accZ.length; i++) {
+          qIndex -= (accZ[i]).abs();
         }
-        qIndex = qIndex / accZ.length;
         Position position2 = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
         _sendDataToFirestore(position1, position2, qIndex);
         position1 = position2;
         accZ = [];
       }
-      _getCurrentLocation(); // TODO: nu functioneste
-      _getDistance(); // TODO: nu functioneste
-      _getSpeed(); // TODO: nu functioneste
+      _getCurrentLocation();
+      _getSpeed();
     });
   }
 
@@ -179,7 +184,6 @@ class _RideScreenState extends State<RideScreen> {
   void initState() {
     super.initState();
     dataList = fetchDataFromFirestore();
-    distance = _getDistance();
     _getCurrentLocation();
     startTracking();
     startCronometer();
@@ -188,6 +192,11 @@ class _RideScreenState extends State<RideScreen> {
         accZ.add(event.z);
       }
     );
+    _wf.currentWeatherByLocation(currentPosition.latitude, currentPosition.longitude).then((w) {
+      setState((){
+      weather = w;
+      });
+    });
     
   }
 
@@ -205,7 +214,6 @@ class _RideScreenState extends State<RideScreen> {
         } else {
           return Column(
                 children: [
-              
                   // device data
                   Container(
                     padding: EdgeInsets.all(10),
@@ -215,14 +223,14 @@ class _RideScreenState extends State<RideScreen> {
                         Column(
                           children: [
                             Text('Speed', style: TextStyle(fontWeight: FontWeight.bold)),
-                            StreamBuilder<double>(
+                            StreamBuilder<int>(
                               stream: Stream.value(_getSpeed()), // Replace null with your actual stream
                               builder: (context, snapshot) {
                                 if (snapshot.hasData) {
-                                  double? speed = snapshot.data; // Replace with the actual speed value from the stream
+                                  int? speed = snapshot.data; // Replace with the actual speed value from the stream
                                   return Text('$speed m/s');
                                 } else {
-                                  return Text('Loading...'); // Show loading indicator while waiting for data
+                                  return Text('-'); // Show loading indicator while waiting for data
                                 }
                               }
                             ),
@@ -237,7 +245,7 @@ class _RideScreenState extends State<RideScreen> {
                                 if (snapshot.hasData) {
                                   return Text('${snapshot.data} m');
                                 } else if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return const Text('Loading...'); // Show loading indicator while waiting for data
+                                  return const Text('-'); // Show loading indicator while waiting for data
                                 }
                                 return Container(); // Add a return statement at the end
                               },
@@ -254,6 +262,10 @@ class _RideScreenState extends State<RideScreen> {
                             ),
                           ],
                         ),
+                        Column(children: [
+                          Text('Temperature', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text("${weather?.temperature?.celsius?.toStringAsFixed(0)} °C", style: TextStyle(fontWeight: FontWeight.bold))],
+                        )
                       ],
                     ),
                   ),
