@@ -5,6 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:io';
+import 'dart:isolate';
 
 class RideScreen extends StatefulWidget {
   @override
@@ -12,48 +15,78 @@ class RideScreen extends StatefulWidget {
 }
 
 class _RideScreenState extends State<RideScreen> {
+  Position position1 = Position(latitude: 0, longitude: 0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, 
+                                heading: 0, speed: 0, speedAccuracy: 0, floor: 0, isMocked: false, altitudeAccuracy: 0, headingAccuracy: 0);
+
+  bool firstRun = true;
+  List accZ = [];
 
   GoogleMapController? _mapController;
   final LatLng _center = const LatLng(45.521563, -122.677433); // Example: Portland, OR
+  Position startingPosition = Position(longitude: 0.0, latitude: 0.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
+  Position currentPosition = Position(longitude: 0.0, latitude: 0.0, timestamp: DateTime.now(), accuracy: 0, altitude: 0, altitudeAccuracy: 0, heading: 0, headingAccuracy: 0, speed: 0, speedAccuracy: 0);
+  double distance = 0.0;
+  double speed=0.0;
   Timer? _timer;
   bool toggle = false;
+  int seconds = 0;
+  String digitSeconds = '00';
+  Timer? timer;
+  bool started = false;
+  late Future<List> dataList;
+
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
   }
 
-  Future<void> _getCurrentLocation() async {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  Future<Position> _getCurrentLocation() async {
+    currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
     _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(position.latitude, position.longitude), 15.0) 
+      CameraUpdate.newLatLngZoom(LatLng(currentPosition.latitude, currentPosition.longitude), 15.0) 
     );
+    return currentPosition;
   }
 
-  Future<void> _callCloudFunction() async {
-    try {
-      HttpsCallable callable = FirebaseFunctions.instance.httpsCallable('processUserData');
-      final results = await callable.call({
-        'name': 'Alice',
-        'email': 'alice@example.com'
-      });
-      print(results.data); // Access the returned data
-    } on FirebaseFunctionsException catch (e) {
-      print('Caught exception: $e');
-    } 
+  double _getDistance() {
+    distance = Geolocator.distanceBetween(startingPosition.latitude, startingPosition.longitude, currentPosition.latitude, currentPosition.longitude);
+    return distance;
   }
 
-  void startTimer() {
-    _timer = Timer.periodic(Duration(minutes: 1), (timer) {
-      _callCloudFunction();
+  double _getSpeed() {
+    speed = currentPosition.speed;
+    return speed;
+  }
+
+  void startTracking() {
+    _timer = Timer.periodic(Duration(seconds: 1), (timer) async {
+      if(firstRun) {
+        position1 = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        firstRun = false;
+      }
+      else{
+        double qIndex = 0;
+        for(int i = 0; i < accZ.length; i++) {
+          qIndex += accZ[i];
+        }
+        qIndex = qIndex / accZ.length;
+        Position position2 = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        _sendDataToFirestore(position1, position2, qIndex);
+        position1 = position2;
+        accZ = [];
+      }
+      _getCurrentLocation(); // TODO: nu functioneste
+      _getDistance(); // TODO: nu functioneste
+      _getSpeed(); // TODO: nu functioneste
     });
   }
 
-  void stopTimer() {
+  void stopTracking() {
     _timer?.cancel();
   }
 
-  Future<void> fetchDataFromFirestore() async {
+  Future<List> fetchDataFromFirestore() async {
     // Reference the Firestore collection
     CollectionReference collectionRef = FirebaseFirestore.instance.collection("actual");
 
@@ -66,7 +99,24 @@ class _RideScreenState extends State<RideScreen> {
     print(dataList);
 
     drawLines(dataList);
+
+    return dataList;
   }
+ 
+ void _sendDataToFirestore(Position position1, Position position2, double qIndex) {
+    CollectionReference collectionRef = FirebaseFirestore.instance.collection("pre-check");
+      // Call the user's CollectionReference to add a new user
+      print("Pachet: " + qIndex.toString());
+     collectionRef.add({
+            'lat': position1.latitude,
+            'lng': position1.longitude,
+            'lat2': position2.latitude,
+            'lng2': position2.longitude,
+            'qIndex': qIndex
+          })
+          .then((value) => print("Data Added"))
+          .catchError((error) => print("Failed to add data: $error"));
+ }
 
   final Set<Polyline> _polylines = {};
   void drawLines(List<Map<String, dynamic>> dataList) {
@@ -95,126 +145,194 @@ class _RideScreenState extends State<RideScreen> {
       print(_polylines);
   }
 
+  //Stop timer function
+  void stopCronometer() {
+    timer!.cancel();
+    setState(() {
+      started = false;
+    });
+  }
+
+  //Reset timer function
+  void resetCronometer() {
+    timer!.cancel();
+    setState(() {
+      started = false;
+      seconds = 0;
+      digitSeconds = '00';
+    });
+  }
+
+  //Start timer function
+  void startCronometer(){
+    started=true;
+    timer = Timer.periodic(Duration(seconds: 1), (timer) {
+      int localSeconds = seconds + 1;
+      setState(() {
+        seconds = localSeconds;
+        digitSeconds = (localSeconds >= 10) ? "$localSeconds" : "0$localSeconds"; // corrected the formatting for seconds
+      });
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation(); 
+    dataList = fetchDataFromFirestore();
+    distance = _getDistance();
+    _getCurrentLocation();
+    startTracking();
+    startCronometer();
+    userAccelerometerEventStream().listen(
+      (UserAccelerometerEvent event) {
+        accZ.add(event.z);
+      }
+    );
+    
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: fetchDataFromFirestore(), 
+    return Scaffold(
+            appBar: AppBar(),
+            body: FutureBuilder(
+      future: dataList, 
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
         } else if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}'); // Show error if any
         } else {
-          return Scaffold(
-            appBar: AppBar(),
-            body: Column(
-              children: [
-
-                // device data
-                Container(
-                  padding: EdgeInsets.all(10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      Column(
-                        children: [
-                          Text('Speed', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('0 km/h'), // Replace with actual speed
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text('Distance', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('0 km'), // Replace with actual distance
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Text('Time', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('0 min'), // Replace with actual time
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // google map
-                Expanded(
-                  child: Stack(
-                    children: [GoogleMap(
-                      onMapCreated: _onMapCreated,
-                      myLocationEnabled: true,
-                      initialCameraPosition: CameraPosition(
-                        target: _center,
-                        zoom: 17.0,
-                      ),
-                      polylines: _polylines,
-                    ),
-                    // buttons to start/stop the ride
-                    Stack(
-                      alignment: Alignment.center,
+          return Column(
+                children: [
+              
+                  // device data
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Positioned(
-                          bottom: 10,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              RawMaterialButton(
-                                onPressed: () {
-                                  if(toggle) {
-                                    //startTimer();
-                                    print("Timer started");
-                                  } else {
-                                    //stopTimer();
-                                    print("Timer stopped");
-                                  }
-                                  setState(() {
-                                    // changing the icon
-                                    toggle = !toggle;
-                                  });
-                                },
-                                elevation: 2.0,
-                                fillColor: Colors.white,
-                                child: Icon(
-                                  toggle ? Icons.play_arrow :
-                                  Icons.pause,
-                                  size: 35.0,
-                                ),
-                                padding: EdgeInsets.all(15.0),
-                                shape: CircleBorder(),
-                              ),
-                              RawMaterialButton(
-                                onPressed: () {
-                                  // Add functionality for stop button
-                                  print("Stop button pressed");
-                                },
-                                elevation: 2.0,
-                                fillColor: Colors.white,
-                                child: Icon(
-                                  Icons.stop,
-                                  size: 35.0,
-                                ),
-                                padding: EdgeInsets.all(15.0),
-                                shape: CircleBorder(),
-                              ),
-                            ],
-                          ),
+                        Column(
+                          children: [
+                            Text('Speed', style: TextStyle(fontWeight: FontWeight.bold)),
+                            StreamBuilder<double>(
+                              stream: Stream.value(_getSpeed()), // Replace null with your actual stream
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  double? speed = snapshot.data; // Replace with the actual speed value from the stream
+                                  return Text('$speed m/s');
+                                } else {
+                                  return Text('Loading...'); // Show loading indicator while waiting for data
+                                }
+                              }
+                            ),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('Distance', style: TextStyle(fontWeight: FontWeight.bold)),
+                            StreamBuilder<dynamic>(
+                              stream: Stream.value(_getDistance()), // Replace null with your actual stream
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  return Text('${snapshot.data} m');
+                                } else if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Text('Loading...'); // Show loading indicator while waiting for data
+                                }
+                                return Container(); // Add a return statement at the end
+                              },
+                            
+                            ),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Text('Time', style: TextStyle(fontWeight: FontWeight.bold)),
+                            Text(
+                              started ? '$digitSeconds s' : '$seconds s', // Show updated seconds only if timer started
+                              style: TextStyle(fontWeight: FontWeight.bold)
+                            ),
+                          ],
                         ),
                       ],
-                    )
-                  ],),
-                ),
-              ],
-            )
-          );
+                    ),
+                  ),
+                  
+                  // google map
+                  Expanded(
+                    child: Stack(
+                      children: [GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        myLocationEnabled: true,
+                        initialCameraPosition: CameraPosition(
+                          target: currentPosition != null ? LatLng(currentPosition.latitude, currentPosition.longitude) : _center,
+                          zoom: 17.0,
+                        ),
+                        polylines: _polylines,
+                      ),
+                      // buttons to start/stop the ride
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned(
+                            bottom: 10,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                RawMaterialButton(
+                                  onPressed: () {
+                                    if(toggle) {
+                                      print("Timer started");
+                                      startCronometer();
+                                      startTracking();
+                                    } else {
+                                      print("Timer stopped");
+                                      stopCronometer();
+                                      stopTracking();
+                                    }
+                                    setState(() {
+                                      // changing the icon
+                                      toggle = !toggle;
+                                    });
+                                  },
+                                  elevation: 2.0,
+                                  fillColor: Colors.white,
+                                  child: Icon(
+                                    toggle ? Icons.play_arrow :
+                                    Icons.pause,
+                                    size: 35.0,
+                                  ),
+                                  padding: EdgeInsets.all(15.0),
+                                  shape: CircleBorder(),
+                                ),
+                                RawMaterialButton(
+                                  onPressed: () {
+                                    // Add functionality for stop button
+                                    print("Stop button pressed");
+                                    resetCronometer();
+                                    stopTracking();
+                                  },
+                                  elevation: 2.0,
+                                  fillColor: Colors.white,
+                                  child: Icon(
+                                    Icons.stop,
+                                    size: 35.0,
+                                  ),
+                                  padding: EdgeInsets.all(15.0),
+                                  shape: CircleBorder(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    ],),
+                  ),
+                ],
+              );
         }
       },
-    );
-  }
-}
+              ),
+          );
+        }
+      }
