@@ -1,10 +1,12 @@
+import 'dart:convert';
+
 import 'package:bikepath/main.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:bikepath/ride.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:firebase_database/firebase_database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -14,6 +16,7 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  
 
   GoogleMapController? _mapController;
   final LatLng _center = const LatLng(45.521563, -122.677433); // Example: Portland, OR
@@ -32,9 +35,50 @@ class _HomeState extends State<Home> {
     super.initState();
     _requestLocationPermission();
     _getCurrentLocation();
+    //getData();
   }
 
-  
+  Future<void> fetchDataFromFirestore() async {
+    // Reference the Firestore collection
+    CollectionReference collectionRef = FirebaseFirestore.instance.collection("actual");
+
+    // Get a snapshot of the documents
+    QuerySnapshot querySnapshot = await collectionRef.get();
+
+    // Convert the documents to a list of maps 
+    List<Map<String, dynamic>>? dataList = (querySnapshot.docs.map((doc) => doc.data()).toList() ?? []).cast<Map<String, dynamic>>();
+
+    print(dataList);
+
+    drawLines(dataList);
+  }
+
+  final Set<Polyline> _polylines = {};
+  void drawLines(List<Map<String, dynamic>> dataList) {
+    List<LatLng> points = [];
+    print("0->");
+    for (var i = 0; i < dataList.length; i++) {
+      points.add(LatLng(dataList[i]['lat'] ?? 0, dataList[i]['lng'] ?? 0));
+      points.add(LatLng(dataList[i]['lat2'] ?? 0, dataList[i]['lng2'] ?? 0));
+    }
+    print(points);
+    Color color = Colors.green;
+    for (int i = 0; i < points.length-1; i+=2) {
+      if(dataList[(i / 2).toInt()]['qIndex'] > 5 && dataList[(i / 2).toInt()]['qIndex'] < 7) color = Colors.orange;
+      else if(dataList[(i / 2).toInt()]['qIndex'] >= 7) color = Colors.red;
+      else color = Colors.green;
+      final PolylineId polylineId = PolylineId(i.toString());
+      final Polyline polyline = Polyline(
+        polylineId: polylineId,
+        points: [points[i], points[i+1]],
+        color: color,
+        width: 4,
+      );
+
+      _polylines.add(polyline);
+      }
+      print(_polylines);
+  }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
@@ -50,93 +94,105 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Scaffold(
-        body: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 109,
-              decoration: BoxDecoration(
-                color: Colors.white
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10, left: 20, right: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(child: Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Image.asset('lib/assets/logo_long.png', width: 250),
-                    )),
-                    Center(child: Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: black),)),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: Stack(
+    return FutureBuilder(
+      future: fetchDataFromFirestore(), // Assuming this is the function you want to wait for
+      builder: (BuildContext context, AsyncSnapshot snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
+        } else if (snapshot.hasError) {
+          return Text('Error: ${snapshot.error}'); // Show error if any
+        } else {
+          return SafeArea(
+            child: Scaffold(
+              body: Column(
                 children: [
-                  GoogleMap(
-                    onMapCreated: _onMapCreated,
-                    myLocationEnabled: true,
-                    initialCameraPosition: CameraPosition(
-                      target: _center,
-                      zoom: 11.0,
+                  Container(
+                    width: double.infinity,
+                    height: 109,
+                    decoration: BoxDecoration(
+                      color: Colors.white
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 10, left: 20, right: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(child: Padding(
+                            padding: const EdgeInsets.only(top: 5),
+                            child: Image.asset('lib/assets/logo_long.png', width: 250),
+                          )),
+                          Center(child: Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: black),)),
+                        ],
+                      ),
                     ),
                   ),
-                  Positioned(
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(100), bottomRight: Radius.circular(100)),
-                        boxShadow: List<BoxShadow>.generate(2, (index) => BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: Offset(0, 7))),
-                      ),
-                  ),),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned(
-                        bottom: 20,
-                        child: InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => RideScreen()),
-                            );
-                          },
-                          child: Container(
-                            width: 120,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Icon(Icons.pedal_bike, color: Colors.white,),
-                                SizedBox(width: 5,),
-                                Text('Start a ride', style: TextStyle(color: Colors.white),),
-                              ],
-                            ),
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        GoogleMap(
+                          onMapCreated: _onMapCreated,
+                          myLocationEnabled: true,
+                          initialCameraPosition: CameraPosition(
+                            target: _center,
+                            zoom: 11.0,
                           ),
-                        )
+                          polylines: _polylines,
                         ),
-                    ],
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Container(
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.only(bottomLeft: Radius.circular(100), bottomRight: Radius.circular(100)),
+                              boxShadow: List<BoxShadow>.generate(2, (index) => BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 5, offset: Offset(0, 7))),
+                            ),
+                        ),),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              bottom: 20,
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => RideScreen()),
+                                  );
+                                },
+                                child: Container(
+                                  width: 120,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.pedal_bike, color: Colors.white,),
+                                      SizedBox(width: 5,),
+                                      Text('Start a ride', style: TextStyle(color: Colors.white),),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
+                  
                 ],
               ),
             ),
-            
-          ],
-        ),
-      ),
+          );
+        }
+      },
     );
   }
 }
