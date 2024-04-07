@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'dart:io';
-import 'dart:isolate';
 import 'package:weather/weather.dart';
 
 class RideScreen extends StatefulWidget {
+  const RideScreen({super.key});
+
   @override
   _RideScreenState createState() => _RideScreenState();
 }
@@ -41,8 +41,14 @@ class _RideScreenState extends State<RideScreen> {
   Weather? weather;
 
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(GoogleMapController controller) async {
     _mapController = controller;
+    String mapStyle = await getMapStyle();
+    controller.setMapStyle(mapStyle);
+  }
+
+  Future<String> getMapStyle() async {
+    return await rootBundle.loadString('lib/assets/map_style.json');
   }
 
   Future<Position> _getCurrentLocation() async {
@@ -65,7 +71,7 @@ class _RideScreenState extends State<RideScreen> {
   }
 
   void startTracking() {
-    _timer = Timer.periodic(Duration(seconds: 1), (timer) async {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if(firstRun) {
         position1 = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
         startingPosition = position1;
@@ -111,7 +117,7 @@ class _RideScreenState extends State<RideScreen> {
  void _sendDataToFirestore(Position position1, Position position2, double qIndex) {
     CollectionReference collectionRef = FirebaseFirestore.instance.collection("pre-check");
       // Call the user's CollectionReference to add a new user
-      print("Pachet: " + qIndex.toString());
+      print("Pachet: $qIndex");
      collectionRef.add({
             'lat': position1.latitude,
             'lng': position1.longitude,
@@ -134,8 +140,9 @@ class _RideScreenState extends State<RideScreen> {
     print(points);
     Color color = Colors.green;
     for (int i = 0; i < points.length-1; i+=2) {
-      if(dataList[(i / 2).toInt()]['qIndex'] > 5 && dataList[(i / 2).toInt()]['qIndex'] < 7) color = Colors.orange;
-      else if(dataList[(i / 2).toInt()]['qIndex'] >= 7) color = Colors.red;
+      if(dataList[i ~/ 2]['qIndex'] > 5 && dataList[i ~/ 2]['qIndex'] < 7) {
+        color = Colors.orange;
+      } else if(dataList[i ~/ 2]['qIndex'] >= 7) color = Colors.red;
       else color = Colors.green;
       final PolylineId polylineId = PolylineId(i.toString());
       final Polyline polyline = Polyline(
@@ -171,7 +178,7 @@ class _RideScreenState extends State<RideScreen> {
   //Start timer function
   void startCronometer(){
     started=true;
-    timer = Timer.periodic(Duration(seconds: 1), (timer) {
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       int localSeconds = seconds + 1;
       setState(() {
         seconds = localSeconds;
@@ -203,12 +210,18 @@ class _RideScreenState extends State<RideScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-            appBar: AppBar(),
+      backgroundColor: const Color.fromARGB(255, 53, 53, 53),
+            appBar: AppBar(
+              backgroundColor: const Color.fromARGB(255, 29, 29, 29),
+              iconTheme: IconThemeData(color: Colors.white),
+              centerTitle: true,
+              title: Image.asset('lib/assets/logo_long_white.png', width: 200),
+            ),
             body: FutureBuilder(
       future: dataList, 
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
+          return const Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
         } else if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}'); // Show error if any
         } else {
@@ -216,34 +229,43 @@ class _RideScreenState extends State<RideScreen> {
                 children: [
                   // device data
                   Container(
-                    padding: EdgeInsets.all(10),
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(255, 29, 29, 29),
+                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+                    ),
+                    padding: const EdgeInsets.all(10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         Column(
                           children: [
-                            Text('Speed', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Speed', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                             StreamBuilder<int>(
                               stream: Stream.value(_getSpeed()), // Replace null with your actual stream
                               builder: (context, snapshot) {
                                 if (snapshot.hasData) {
                                   int? speed = snapshot.data; // Replace with the actual speed value from the stream
-                                  return Text('$speed m/s');
+                                  return Text('$speed m/s', style: const TextStyle(color: Colors.white));
                                 } else {
-                                  return Text('-'); // Show loading indicator while waiting for data
+                                  return const Text('-'); // Show loading indicator while waiting for data
                                 }
                               }
                             ),
                           ],
                         ),
+                        Container(
+                          height: 35,
+                          width: 2,
+                          color: Colors.white24,
+                        ),
                         Column(
                           children: [
-                            Text('Distance', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Distance', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                             StreamBuilder<dynamic>(
                               stream: Stream.value(_getDistance()), // Replace null with your actual stream
                               builder: (context, snapshot) {
                                 if (snapshot.hasData) {
-                                  return Text('${snapshot.data} m');
+                                  return Text('${snapshot.data} m', style: const TextStyle(color: Colors.white));
                                 } else if (snapshot.connectionState == ConnectionState.waiting) {
                                   return const Text('-'); // Show loading indicator while waiting for data
                                 }
@@ -253,34 +275,48 @@ class _RideScreenState extends State<RideScreen> {
                             ),
                           ],
                         ),
+                        Container(
+                          height: 35,
+                          width: 2,
+                          color: Colors.white24,
+                        ),
                         Column(
                           children: [
-                            Text('Time', style: TextStyle(fontWeight: FontWeight.bold)),
+                            const Text('Time', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                             Text(
                               started ? '$digitSeconds s' : '$seconds s', // Show updated seconds only if timer started
-                              style: TextStyle(fontWeight: FontWeight.bold)
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ],
                         ),
+                        Container(
+                          height: 35,
+                          width: 2,
+                          color: Colors.white24,
+                        ),
                         Column(children: [
-                          Text('Temperature', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text("${weather?.temperature?.celsius?.toStringAsFixed(0)} °C", style: TextStyle(fontWeight: FontWeight.bold))],
+                          const Text('Temperature', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                          Text("${weather?.temperature?.celsius?.toStringAsFixed(0)} °C", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),],
                         )
                       ],
                     ),
                   ),
-                  
+                  SizedBox(height: 5,),
                   // google map
                   Expanded(
                     child: Stack(
-                      children: [GoogleMap(
-                        onMapCreated: _onMapCreated,
-                        myLocationEnabled: true,
-                        initialCameraPosition: CameraPosition(
-                          target: currentPosition != null ? LatLng(currentPosition.latitude, currentPosition.longitude) : _center,
-                          zoom: 17.0,
+                      children: [ClipRRect(
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                        child: GoogleMap(
+                          onMapCreated: _onMapCreated,
+                          myLocationEnabled: true,
+                          minMaxZoomPreference: const MinMaxZoomPreference(0, 25),
+                          initialCameraPosition: CameraPosition(
+                            target: currentPosition != null ? LatLng(currentPosition.latitude, currentPosition.longitude) : _center,
+                            zoom: 19.0,
+                          ),
+                          polylines: _polylines,
                         ),
-                        polylines: _polylines,
                       ),
                       // buttons to start/stop the ride
                       Stack(
@@ -309,13 +345,13 @@ class _RideScreenState extends State<RideScreen> {
                                   },
                                   elevation: 2.0,
                                   fillColor: Colors.white,
+                                  padding: const EdgeInsets.all(15.0),
+                                  shape: const CircleBorder(),
                                   child: Icon(
                                     toggle ? Icons.play_arrow :
                                     Icons.pause,
                                     size: 35.0,
                                   ),
-                                  padding: EdgeInsets.all(15.0),
-                                  shape: CircleBorder(),
                                 ),
                                 RawMaterialButton(
                                   onPressed: () {
@@ -326,12 +362,12 @@ class _RideScreenState extends State<RideScreen> {
                                   },
                                   elevation: 2.0,
                                   fillColor: Colors.white,
-                                  child: Icon(
+                                  padding: const EdgeInsets.all(15.0),
+                                  shape: const CircleBorder(),
+                                  child: const Icon(
                                     Icons.stop,
                                     size: 35.0,
                                   ),
-                                  padding: EdgeInsets.all(15.0),
-                                  shape: CircleBorder(),
                                 ),
                               ],
                             ),

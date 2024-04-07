@@ -2,9 +2,6 @@ import 'package:bikepath/firebase_options.dart';
 import 'package:bikepath/home.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'ride.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:geolocator/geolocator.dart';
 
 const black = Color.fromARGB(255, 41, 47, 51);
 
@@ -26,7 +23,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: Home(),
+      home: const Home(),
     );
   }
 }

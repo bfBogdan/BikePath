@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:bikepath/main.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:bikepath/ride.dart';
@@ -10,7 +7,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Home extends StatefulWidget {
-  const Home({Key? key}) : super(key: key);
+  const Home({super.key});
 
   @override
   State<Home> createState() => _HomeState();
@@ -66,8 +63,9 @@ class _HomeState extends State<Home> {
     print(points);
     Color color = Colors.green;
     for (int i = 0; i < points.length-1; i+=2) {
-      if(dataList[(i / 2).toInt()]['qIndex'] > 5 && dataList[(i / 2).toInt()]['qIndex'] < 7) color = Colors.orange;
-      else if(dataList[(i / 2).toInt()]['qIndex'] >= 7) color = Colors.red;
+      if(dataList[i ~/ 2]['qIndex'] > 5 && dataList[i ~/ 2]['qIndex'] < 7) {
+        color = Colors.orange;
+      } else if(dataList[i ~/ 2]['qIndex'] >= 7) color = Colors.red;
       else color = Colors.green;
       final PolylineId polylineId = PolylineId(i.toString());
       final Polyline polyline = Polyline(
@@ -107,19 +105,19 @@ class _HomeState extends State<Home> {
       future: fetchDataFromFirestore(), // Assuming this is the function you want to wait for
       builder: (BuildContext context, AsyncSnapshot snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
+          return const Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
         } else if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}'); // Show error if any
         } else {
           return SafeArea(
             child: Scaffold(
-              backgroundColor: Color.fromARGB(255, 53, 53, 53),
+              backgroundColor: const Color.fromARGB(255, 53, 53, 53),
               body: Column(
                 children: [
                   Container(
                     width: double.infinity,
                     height: 109,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Color.fromARGB(255, 29, 29, 29),
                       borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
                     ),
@@ -130,19 +128,19 @@ class _HomeState extends State<Home> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.only(top: 5),
-                            child: Image.asset('lib/assets/logo_long.png', width: 200),
+                            child: Image.asset('lib/assets/logo_long_white.png', width: 200),
                           ),
-                          Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: Colors.white),),
+                          const Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: Colors.white),),
                         ],
                       ),
                     ),
                   ),
-                  SizedBox(height: 5,),
+                  const SizedBox(height: 5,),
                   Expanded(
                     child: Stack(
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
                           child: GoogleMap(
                             onMapCreated: _onMapCreated,
                             myLocationEnabled: true,
@@ -162,7 +160,7 @@ class _HomeState extends State<Home> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (context) => RideScreen()),
+                                    MaterialPageRoute(builder: (context) => const RideScreen()),
                                   );
                                 },
                                 child: Container(
@@ -172,7 +170,7 @@ class _HomeState extends State<Home> {
                                     color: Colors.green,
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
