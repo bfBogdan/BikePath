@@ -63,9 +63,9 @@ class _HomeState extends State<Home> {
     print(points);
     Color color = Colors.green;
     for (int i = 0; i < points.length-1; i+=2) {
-      if(dataList[i ~/ 2]['qIndex'] < -1 && dataList[i ~/ 2]['qIndex'] > -2) {
+      if(dataList[i ~/ 2]['qIndex'] < -20 && dataList[i ~/ 2]['qIndex'] > -30) {
         color = Colors.orange;
-      } else if(dataList[i ~/ 2]['qIndex'] <= -2) color = Colors.red;
+      } else if(dataList[i ~/ 2]['qIndex'] <= -30) color = Colors.red;
       else color = Colors.green;
       final PolylineId polylineId = PolylineId(i.toString());
       final Polyline polyline = Polyline(
