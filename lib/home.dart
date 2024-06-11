@@ -253,7 +253,10 @@ class _HomeState extends State<Home> {
                           const SizedBox(height: 10,),
                           InkWell(
                             onTap: () {
-                              
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const RideScreen()),
+                              );
                             },
                             child: Container(
                               width: double.infinity,
