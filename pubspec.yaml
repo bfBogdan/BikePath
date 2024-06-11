@@ -73,6 +73,7 @@ flutter:
     - lib/assets/logo_square.png
     - lib/assets/map_style.json
     - lib/assets/logo_long_white.png
+    - lib/assets/bike.jpg
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

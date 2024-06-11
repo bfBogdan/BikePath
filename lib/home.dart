@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:bikepath/ride.dart';
@@ -63,9 +66,9 @@ class _HomeState extends State<Home> {
     print(points);
     Color color = Colors.green;
     for (int i = 0; i < points.length-1; i+=2) {
-      if(dataList[i ~/ 2]['qIndex'] < -20 && dataList[i ~/ 2]['qIndex'] > -30) {
+      if(dataList[i ~/ 2]['qIndex'] < -60 && dataList[i ~/ 2]['qIndex'] > -100) {
         color = Colors.orange;
-      } else if(dataList[i ~/ 2]['qIndex'] <= -30) color = Colors.red;
+      } else if(dataList[i ~/ 2]['qIndex'] <= -100) color = Colors.red;
       else color = Colors.green;
       final PolylineId polylineId = PolylineId(i.toString());
       final Polyline polyline = Polyline(
@@ -108,7 +111,7 @@ class _HomeState extends State<Home> {
           return const Center(child: CircularProgressIndicator()); // Show loading spinner while waiting
         } else if (snapshot.hasError) {
           return Text('Error: ${snapshot.error}'); // Show error if any
-        } else {
+        } else if (snapshot.hasError) {
           return SafeArea(
             child: Scaffold(
               backgroundColor: const Color.fromARGB(255, 53, 53, 53),
@@ -191,6 +194,194 @@ class _HomeState extends State<Home> {
                 ],
               ),
             ),
+          );
+        } else {
+          return SafeArea(
+            child: Scaffold(
+              backgroundColor: const Color.fromARGB(255, 53, 53, 53),
+              body: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 15, left: 15, right: 15, bottom: 15),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(255, 29, 29, 29),
+                              borderRadius: BorderRadius.all(Radius.circular(30)),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 10, left: 20, right: 20, bottom: 10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Welcome back, Claudiu!', style: TextStyle(fontSize: 25, color: Colors.white),),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                        decoration: const BoxDecoration(
+                          color: Color.fromARGB(255, 29, 29, 29),
+                          borderRadius: BorderRadius.all(Radius.circular(30)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 10, left: 10, right: 10, bottom: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.wysiwyg, color: Colors.white, size: 35,),
+                            ],
+                        ),
+                      ),
+                    ),
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(left: 15, top: 10, right: 15, bottom: 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Start a ride', style: TextStyle(color: Colors.white, fontSize: 35),),
+                          ),
+                          const SizedBox(height: 10,),
+                          InkWell(
+                            onTap: () {
+                              
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    clipBehavior: Clip.hardEdge,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+                                    ),
+                                    child: Image.asset('lib/assets/bike.jpg', width: double.infinity, height: 120, fit: BoxFit.cover,)
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.pedal_bike, color: Colors.white, size: 35,),
+                                        const SizedBox(width: 10,),
+                                        Text('Start a ride', style: TextStyle(color: Colors.white, fontSize: 30),),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(left: 15, top: 20, right: 15, bottom: 10),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Points of interest', style: TextStyle(color: Colors.white, fontSize: 35),),
+                          ),
+                          const SizedBox(height: 10,),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.green,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                height: 210,
+                                width: MediaQuery.of(context).size.width * 0.45,
+                                //child: Image.asset('lib/assets/bike.jpg', fit: BoxFit.fitHeight,),
+                              ),
+                              Column(
+                                children: [
+                                  Container(
+                                    clipBehavior: Clip.hardEdge,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    ),
+                                    height: 100,
+                                    width: MediaQuery.of(context).size.width * 0.45,
+                                    child: Image.asset('lib/assets/bike.jpg', fit: BoxFit.cover,)
+                                  ),
+                                  SizedBox(height: 10,),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      borderRadius: BorderRadius.all(Radius.circular(20)),
+                                    ),
+                                    width: MediaQuery.of(context).size.width * 0.45,
+                                    height: 100,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                    ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(left: 15, top: 20, right: 15, bottom: 20),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('View the map', style: TextStyle(color: Colors.white, fontSize: 35),),
+                          ),
+                          const SizedBox(height: 10,),
+                          Container(
+                            clipBehavior: Clip.hardEdge,
+                            width: double.infinity,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              image: new DecorationImage(
+                                image: new ExactAssetImage('lib/assets/bike.jpg'),
+                                fit: BoxFit.cover,
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: ClipRRect(
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 3, sigmaY: 3),
+                                child: Align(alignment: Alignment.center, child: Text('Open the map', style: TextStyle(color: Colors.white, fontSize: 30),)))),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                            ),
+              ),
+          ),
           );
         }
       },
