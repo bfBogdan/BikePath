@@ -48,7 +48,7 @@ class _HomeState extends State<Home> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.wysiwyg, color: Colors.white, size: 30,),
+                        Icon(Icons.person, color: Colors.white, size: 30,),
                       ],
                   ),
                 ),
